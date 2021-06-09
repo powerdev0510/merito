@@ -1,5 +1,3 @@
-pragma solidity ^0.4.24;
-
 library SafeMath {
     function mul(uint256 a, uint256 b) internal constant returns (uint256) {
         if (a == 0) {
@@ -56,7 +54,7 @@ interface tokenRecipient {
     ) public;
 }
 
-contract TokenERC20 {
+contract TokenKlay {
     using SafeMath for uint256;
 
     string public name;
@@ -72,7 +70,19 @@ contract TokenERC20 {
     event Burn(address indexed from, uint256 value);
 
     constructor() public {}
-
+    /**
+     * @dev Moves tokens `_value` from `_from` to `_to`.
+     *
+     * This is internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `_to` cannot be the zero address.
+     * - `_from` must have a balance of at least `_value`.
+     */
     function _transfer(
         address _from,
         address _to,
@@ -87,11 +97,25 @@ contract TokenERC20 {
         emit Transfer(_from, _to, _value);
         assert(balanceOf[_from].add(balanceOf[_to]) == previousBalances);
     }
-
+    /**
+     * @dev Moves tokens `_value` from `sender` to `_to`.
+     *
+     * This is internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     */
     function transfer(address _to, uint256 _value) public {
         _transfer(msg.sender, _to, _value);
     }
-
+    /**
+     *
+     * Emits an {Approval} event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - the caller must have allowance for `_from`'s tokens of at least `_value`.
+     */
     function transferFrom(
         address _from,
         address _to,
@@ -102,7 +126,10 @@ contract TokenERC20 {
         _transfer(_from, _to, _value);
         return true;
     }
-
+    /**
+     * @dev Sets `_value` as the allowance of `_spender` over the `owner` s tokens.
+     *
+     */
     function approve(address _spender, uint256 _value)
         public
         returns (bool success)
@@ -124,32 +151,70 @@ contract TokenERC20 {
     }
 }
 
-contract MyAdvancedToken is owned, TokenERC20 {
+contract MyAdvancedToken is owned, TokenKlay {
+    /**
+     * @dev name of the token.
+     */
     string public name = "MERITO";
+    /**
+     * @dev symbol of the token.
+     */
     string public symbol = "MERI";
+    /**
+     * @dev decimal of the token.
+     */
     uint8 public decimals = 18;
-
+    /**
+     * @dev price of the token related to Klay.
+     */
     uint256 public tokenPrice = 320;
+    /**
+     * @dev total supply of the token.
+     */
     uint256 public totalSupply = 5000000000e18;
+    /**
+     * @dev status of the token lockup.
+     */
     uint public lockedStatus = 0;
+    /**
+     * @dev Structure of the locked list.
+     */
     struct LockList {
         address account;
         uint256 amount;
     }
-
+    /**
+     * @dev lockuped account list.
+     */
     LockList[] public lockupAccount;
-
+    /**
+     * @dev Sets balance of the owner.
+     */
     constructor() public {
         balanceOf[msg.sender] = totalSupply;
     }
-
+    /**
+     * @dev Purcahse token and transfer when user send Klay to the contract address.
+     *  
+     * Requirements:
+     *
+     * - `msg.value` bigger than zero address.
+     */
     function() public payable {
         require(msg.value > 0);
         uint256 amount = msg.value.mul(tokenPrice);
         _transfer(owner, msg.sender, amount); // makes the transfers
         (owner).transfer(address(this).balance);
     }
-
+    /**
+     * @dev Moves tokens `_value` from `_from` to `_to`.
+     *
+     * Requirements:
+     *
+     * - `lockedStatus` cannot be the 1.
+     * - `_to` cannot be the zero address.
+     * - Unlocked Amount of `_from` must bigger than `_value`.
+     */
     function _transfer(
         address _from,
         address _to,
@@ -166,36 +231,67 @@ contract MyAdvancedToken is owned, TokenERC20 {
         assert(balanceOf[_from].add(balanceOf[_to]) == previousBalances);
         emit Transfer(_from, _to, _value);
     }
-
+    /** @dev Creates `mintedAmount` tokens and assigns them to `target`, increasing
+     * the total supply.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     */
     function mint(address target, uint256 mintedAmount) public onlyOwner {
         balanceOf[target] = balanceOf[target].add(mintedAmount);
         totalSupply = totalSupply.add(mintedAmount);
         emit Transfer(0, this, mintedAmount);
         emit Transfer(this, target, mintedAmount);
     }
-
+    /** @dev Send `amount` tokens to `target` from owner
+     *
+     * Emits a {Transfer} event with `from` set to the owner and `to` set to the target.
+     * Requirements:
+     *
+     * - Balance of `onwer` has to be bigger than amount.
+     */
     function sendToken(address target, uint256 amount) public onlyOwner {
         require(balanceOf[owner] >= amount);
         _transfer(owner, target, amount);
         emit Transfer(owner, target, amount);
     }
-
+    /** @dev Remove all amount of tokens from target
+     *
+     * Emits a {Transfer} event with `from` set to the target and `to` set to the owner.
+     */
     function removeAllToken(address target) public onlyOwner {
         _transfer(target, owner, balanceOf[target]);
         emit Transfer(target, owner, balanceOf[target]);
     }
-
+    /** @dev Remove `amount` of tokens from target
+     *
+     * Emits a {Transfer} event with `from` set to the target and `to` set to the owner.
+     * Requirements:
+     *
+     * - Balance of `target` has to be bigger than amount.
+     */
     function removeToken(address target, uint256 amount) public onlyOwner {
         require(balanceOf[target] >= amount);
         _transfer(target, owner, amount);
         emit Transfer(target, owner, amount);
     }
+    /** @dev Set lockup status of the all account as 1
+     *
+     */
     function lockAll () public onlyOwner {
         lockedStatus = 1;
     }
+    /** @dev Set lockup status of the all account as 0
+     *
+     */
     function unlockAll () public onlyOwner {
         lockedStatus = 0;
     }
+    /** @dev Lockup `amount` of the token from `account`
+     *
+     * Requirements:
+     *
+     * - Balance of `account` has to be bigger than `amount`.
+     */
     function lockAccount (address account, uint256 amount) public onlyOwner {
       require(balanceOf[account] >= amount);
       uint flag = 0;
@@ -209,7 +305,9 @@ contract MyAdvancedToken is owned, TokenERC20 {
         lockupAccount.push(LockList(account, amount));
       }
     }
-
+    /** @dev Return amount of locked tokens from `account`
+     *
+     */
     function getLockedAmount(address account) public view returns (uint256) {
       uint256 res = 0;
       for (uint i = 0; i < lockupAccount.length; i++) {
@@ -219,39 +317,76 @@ contract MyAdvancedToken is owned, TokenERC20 {
       }
       return res;
     }
-
+    /** @dev Return amount of unlocked tokens from `account`
+     *
+     */
     function getUnlockedAmount(address account) public view returns (uint256) {
       uint256 res = 0;
       res = balanceOf[account].sub(getLockedAmount(account));
       return res;
     }
-
+    /** @dev Return number of locked account
+     *
+     */
     function getLockedListLength() public view returns(uint) {
         return lockupAccount.length;
     } 
-
+    /** @dev Owner can set the token price as `_tokenPrice`.
+     *
+     * Requirements:
+     *
+     * - `_tokenPrice` has to be bigger than zero.
+     */
     function setTokenPrice(uint256 _tokenPrice) public onlyOwner {
         require(_tokenPrice > 0);
         tokenPrice = _tokenPrice;
     }
-
+    /** @dev Withdraw `amount` of Klay from smart contract to owner.
+     *
+     * Requirements:
+     *
+     * - Balance of the smart contract has to be bigger than `amount`.
+     */
     function withdrawBalance(uint256 amount) public onlyOwner {
         require(address(this).balance >= amount);
         (owner).transfer(amount);
     }
-
+    /** @dev Withdraw all amount of Klay from smart contract to owner.
+     *
+     * Requirements:
+     *
+     * - Balance of the smart contract has to be bigger than zero.
+     */
     function withdrawAll() public onlyOwner {
         require(address(this).balance >= 0);
         (owner).transfer(address(this).balance);
     }
-    
+    /**
+     * @dev Destroys `_value` tokens from sender, reducing the
+     * total supply.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - sender must have at least `_value` tokens.
+     */
     function burn(uint256 _value) external {
         require(balanceOf[msg.sender] >= _value);
         balanceOf[msg.sender] = balanceOf[msg.sender].sub(_value);
         totalSupply = totalSupply.sub(_value);
         emit Transfer(msg.sender, address(0), _value);
     }
-
+    /**
+     * @dev Destroys `_value` tokens from `_from`, reducing the
+     * total supply.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `_from` must have at least `_value` tokens.
+     */
     function burnFrom(address _from, uint256 _value) external {
         require(balanceOf[_from] >= _value);
         require(_value <= allowance[_from][msg.sender]);
@@ -261,4 +396,3 @@ contract MyAdvancedToken is owned, TokenERC20 {
         emit Transfer(_from, address(0), _value);
     }
 }
-
