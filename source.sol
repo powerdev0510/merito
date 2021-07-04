@@ -1,3 +1,4 @@
+pragma solidity ^0.4.24;
 library SafeMath {
     function mul(uint256 a, uint256 b) internal constant returns (uint256) {
         if (a == 0) {
@@ -41,6 +42,7 @@ contract owned {
 
     function transferOwnership(address newOwner) public onlyOwner {
         require(newOwner != address(0));
+        emit OwnershipTransferred(_owner, newOwner);
         owner = newOwner;
     }
 }
@@ -66,7 +68,7 @@ contract TokenKlay {
     mapping(address => mapping(address => uint256)) public allowance;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
     event Burn(address indexed from, uint256 value);
 
     constructor() public {}
@@ -135,6 +137,7 @@ contract TokenKlay {
         returns (bool success)
     {
         allowance[msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _value);
         return true;
     }
 
@@ -299,6 +302,7 @@ contract MyAdvancedToken is owned, TokenKlay {
         if (lockupAccount[i].account == account) {
           lockupAccount[i].amount = amount;
           flag = flag + 1;
+          break;
         }
       }
       if(flag == 0) {
@@ -313,6 +317,7 @@ contract MyAdvancedToken is owned, TokenKlay {
       for (uint i = 0; i < lockupAccount.length; i++) {
         if (lockupAccount[i].account == account) {
           res = lockupAccount[i].amount;
+          break;
         }
       }
       return res;
