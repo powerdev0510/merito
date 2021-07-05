@@ -1,4 +1,5 @@
 pragma solidity ^0.4.24;
+
 library SafeMath {
     function mul(uint256 a, uint256 b) internal constant returns (uint256) {
         if (a == 0) {
@@ -31,6 +32,8 @@ library SafeMath {
 contract owned {
     address public owner;
 
+    event OwnershipTransferred(address indexed _owner, address indexed newOwner);
+
     constructor() public {
         owner = msg.sender;
     }
@@ -42,7 +45,7 @@ contract owned {
 
     function transferOwnership(address newOwner) public onlyOwner {
         require(newOwner != address(0));
-        emit OwnershipTransferred(_owner, newOwner);
+        emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
     }
 }
